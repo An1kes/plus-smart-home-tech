@@ -2,35 +2,43 @@ package ru.yandex.practicum.collector.service;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.avro.specific.SpecificRecordBase;
-import org.apache.avro.io.BinaryEncoder;
-import org.apache.avro.io.EncoderFactory;
-import org.apache.avro.specific.SpecificDatumWriter;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.collector.model.*;
 import ru.yandex.practicum.kafka.telemetry.event.*;
 
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.time.Instant;
 
 @Service
-@RequiredArgsConstructor
 public class EventCollectorService {
 
-    private final KafkaTemplate<String, byte[]> kafkaTemplate;
+    private final Producer<String, SpecificRecordBase> kafkaProducer;
+    private final String sensorsTopic;
+    private final String hubsTopic;
 
-    private static final String SENSORS_TOPIC = "telemetry.sensors.v1";
-    private static final String HUBS_TOPIC = "telemetry.hubs.v1";
+    public EventCollectorService(
+            Producer<String, SpecificRecordBase> kafkaProducer,
+            @Value("${telemetry.kafka.topics.sensors}") String sensorsTopic,
+            @Value("${telemetry.kafka.topics.hubs}") String hubsTopic
+    ) {
+        this.kafkaProducer = kafkaProducer;
+        this.sensorsTopic = sensorsTopic;
+        this.hubsTopic = hubsTopic;
+    }
+
 
     public void collectSensorEvent(SensorEvent event) {
-
-        System.out.println("PROCESSING SENSOR EVENT: id=" + event.getId() + ", type=" + event.getType());
         SensorEventAvro avroEvent = mapSensorEventToAvro(event);
-        byte[] serializedData = serialize(avroEvent);
+        ProducerRecord<String, SpecificRecordBase> record = new ProducerRecord<>(sensorsTopic, null, avroEvent);
+        kafkaProducer.send(record);
+    }
 
-        kafkaTemplate.send(SENSORS_TOPIC, null, serializedData);
+    public void collectHubEvent(HubEvent event) {
+        HubEventAvro avroEvent = mapHubEventToAvro(event);
+        ProducerRecord<String, SpecificRecordBase> record = new ProducerRecord<>(hubsTopic, null, avroEvent);
+        kafkaProducer.send(record);
     }
 
     private SensorEventAvro mapSensorEventToAvro(SensorEvent event) {
@@ -86,26 +94,6 @@ public class EventCollectorService {
                 .build();
     }
 
-    private byte[] serialize(SpecificRecordBase record) {
-        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            BinaryEncoder encoder = EncoderFactory.get().binaryEncoder(out, null);
-            SpecificDatumWriter<SpecificRecordBase> writer = new SpecificDatumWriter<>(record.getSchema());
-            writer.write(record, encoder);
-            encoder.flush();
-            return out.toByteArray();
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to serialize Avro record", e);
-        }
-    }
-
-    public void collectHubEvent(HubEvent event) {
-        System.out.println("PROCESSING HUB EVENT: id=" + event + ", type=" + event.getType());
-        HubEventAvro avroEvent = mapHubEventToAvro(event);
-        byte[] serializedData = serialize(avroEvent);
-
-        kafkaTemplate.send(HUBS_TOPIC, null, serializedData);
-    }
-
     private HubEventAvro mapHubEventToAvro(HubEvent event) {
         Object payload = null;
 
@@ -126,7 +114,6 @@ public class EventCollectorService {
             case SCENARIO_ADDED:
                 ScenarioAddedEvent scenarioAdded = (ScenarioAddedEvent) event;
 
-                // Мапим условия
                 var avroConditions = scenarioAdded.getConditions().stream()
                         .map(c -> ScenarioConditionAvro.newBuilder()
                                 .setSensorId(c.getSensorId())
@@ -136,7 +123,6 @@ public class EventCollectorService {
                                 .build())
                         .toList();
 
-                // Мапим действия
                 var avroActions = scenarioAdded.getActions().stream()
                         .map(a -> DeviceActionAvro.newBuilder()
                                 .setSensorId(a.getSensorId())
