@@ -1,0 +1,13 @@
+bootstrap:
+  servers: "localhost:9092"
+
+aggregator:
+  consumer:
+    group-id: aggregator-group
+    poll-timeout: 100ms
+
+telemetry:
+  kafka:
+    topics:
+      sensors: telemetry.sensors.v1
+      snapshots: telemetry.snapshots.v1
