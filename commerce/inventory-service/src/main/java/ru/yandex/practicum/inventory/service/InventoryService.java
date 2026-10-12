@@ -37,6 +37,10 @@ public class InventoryService {
 
     @Transactional
     public InventoryDto createInventory(UpdateInventoryRequest request) {
+        if (inventoryRepository.findByProductId(request.productId()).isPresent()) {
+            throw new IllegalArgumentException("Складская запись для товара с productId=" + request.productId() + " уже существует");
+        }
+
         InventoryItem item = InventoryItem.builder()
                 .productId(request.productId())
                 .quantity(request.quantity())
