@@ -14,6 +14,10 @@ spring:
     properties:
       hibernate:
         format_sql: false
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
 
 eureka:
   client:
@@ -33,6 +37,19 @@ feign:
         connectTimeout: 3000
         readTimeout: 3000
         loggerLevel: basic
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 3s
 
 logging:
   level:
