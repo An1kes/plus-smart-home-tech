@@ -14,10 +14,17 @@ spring:
     properties:
       hibernate:
         format_sql: false
-  cloud:
-    openfeign:
-      circuitbreaker:
-        enabled: true
+
+    cloud:
+      openfeign:
+        circuitbreaker:
+          enabled: true
+      loadbalancer:
+        retry:
+          enabled: true
+          max-retries-on-same-service-instance: 0
+          max-retries-on-next-service-instance: 2
+          retry-on-all-operations: true
 
 eureka:
   client:
