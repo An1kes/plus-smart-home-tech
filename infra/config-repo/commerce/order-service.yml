@@ -15,9 +15,49 @@ spring:
       hibernate:
         format_sql: false
 
+    cloud:
+      openfeign:
+        circuitbreaker:
+          enabled: true
+      loadbalancer:
+        retry:
+          enabled: true
+          max-retries-on-same-service-instance: 0
+          max-retries-on-next-service-instance: 2
+          retry-on-all-operations: true
+
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
   instance:
     instance-id: ${spring.application.name}:${random.value}
+
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 5000
+        loggerLevel: basic
+      inventory-service:
+        connectTimeout: 3000
+        readTimeout: 3000
+        loggerLevel: basic
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 3s
+
+logging:
+  level:
+    ru.yandex.practicum.order.client: DEBUG

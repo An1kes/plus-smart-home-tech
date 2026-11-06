@@ -1,0 +1,50 @@
+server:
+  port: 0
+
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: ""
+  cloud:
+    config:
+      enabled: false
+    gateway:
+      discovery:
+        locator:
+          enabled: false
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        cors-configurations:
+          '[/**]':
+            allowed-origins:
+              - http://localhost:8443
+            allowed-methods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowed-headers:
+              - '*'
+            allow-credentials: true
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+app:
+  security:
+    users:
+      - username: ivan
+        password: "{noop}ivan"
+        roles:
+          - USER
+      - username: anna
+        password: "{noop}anna"
+        roles:
+          - USER
+          - ADMIN
